@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, Calendar, Wifi, Edit, Save, X } from "lucide-react";
+import { Phone, Calendar, Wifi, Edit, Save, X, Copy, PhoneCall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -118,6 +118,25 @@ export const UserDashboard = ({ userType, username }: UserDashboardProps) => {
     setIsEditingName(false);
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: "تم النسخ",
+        description: "تم نسخ الكود بنجاح",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في نسخ الكود",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const makeCall = (code: string) => {
+    window.location.href = `tel:${code}`;
+  };
   const fetchCustomerData = async () => {
     try {
       let query = supabase.from('customers').select(`
@@ -261,6 +280,21 @@ export const UserDashboard = ({ userType, username }: UserDashboardProps) => {
     return null;
   };
 
+  // Get display name for single user
+  const getDisplayName = () => {
+    if (userType !== "single") return username;
+    
+    // If there's a suggested name, use it
+    if (suggestedName) return suggestedName;
+    
+    // If there's a customer name from database, use it
+    if (customers.length > 0 && customers[0].customer_name) {
+      return customers[0].customer_name;
+    }
+    
+    // Fallback to mobile number
+    return username;
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -281,7 +315,7 @@ export const UserDashboard = ({ userType, username }: UserDashboardProps) => {
     <div className="space-y-6 animate-fade-in transition-all duration-500">
       <div className="text-center">
         <h2 className="text-3xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-600">
-          مرحباً {userType === "single" && customers.length > 0 ? customers[0].customer_name : username}
+          مرحباً {getDisplayName()}
         </h2>
         
         {/* Suggested Name Section */}
@@ -349,6 +383,54 @@ export const UserDashboard = ({ userType, username }: UserDashboardProps) => {
         </p>
       </div>
 
+      {/* Units Check Message for Single Users */}
+      {userType === "single" && (
+        <Card className="animate-fade-in shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-50 to-green-50 border-l-4 border-l-blue-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <Phone className="h-5 w-5" />
+              معرفة الوحدات المتبقية
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                لمعرفة الوحدات المتبقية في باقتك، اطلب الكود التالي (التكلفة: 4 قروش)
+              </p>
+              <div className="bg-white p-4 rounded-lg border-2 border-dashed border-blue-300">
+                <div className="flex items-center justify-between">
+                  <code className="text-2xl font-bold text-blue-600 select-all">
+                    #16*1*1#
+                  </code>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard("#16*1*1#")}
+                      className="hover-scale"
+                    >
+                      <Copy className="h-4 w-4 ml-1" />
+                      نسخ
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => makeCall("#16*1*1#")}
+                      className="hover-scale bg-green-600 hover:bg-green-700"
+                    >
+                      <PhoneCall className="h-4 w-4 ml-1" />
+                      اتصال
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                اضغط على "نسخ" لنسخ الكود، أو "اتصال" للاتصال المباشر بالكود
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       <div className="grid gap-6">
         {customers.map((customer, index) => (
           <Card key={customer.id} className="animate-fade-in shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border-l-4 border-l-blue-500 bg-black/80 text-white border-gray-600" style={{ animationDelay: `${index * 0.1}s` }}>
